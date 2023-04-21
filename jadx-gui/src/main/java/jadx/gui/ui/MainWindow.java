@@ -387,6 +387,7 @@ public class MainWindow extends JFrame {
 			fileDialog.setSelectedFile(baseDir.resolve("mappings." + mappingFormat.fileExt));
 			fileDialog.setFileExtList(Collections.singletonList(mappingFormat.fileExt));
 			fileDialog.setSelectionMode(JFileChooser.FILES_ONLY);
+
 		} else {
 			fileDialog.setCurrentDir(baseDir);
 			fileDialog.setSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -745,10 +746,12 @@ public class MainWindow extends JFrame {
 		return false;
 	}
 
-	private void treeRightClickAction(MouseEvent e) {
+	private void treeRightClickAction(MouseEvent e) {// lpp right click function
 		JNode obj = getJNodeUnderMouse(e);
+		ArrayList<String> filesPath = getSelectedNodesPath(e);
+
 		if (obj instanceof JPackage) {
-			JPackagePopupMenu menu = new JPackagePopupMenu(this, (JPackage) obj);
+			JPackagePopupMenu menu = new JPackagePopupMenu(this, (JPackage) obj, filesPath);
 			menu.show(e.getComponent(), e.getX(), e.getY());
 		} else if (obj instanceof JClass || obj instanceof JField || obj instanceof JMethod) {
 			JMenuItem jmi = new JMenuItem(NLS.str("popup.rename"));
@@ -758,6 +761,27 @@ public class MainWindow extends JFrame {
 			menu.show(e.getComponent(), e.getX(), e.getY());
 		}
 	}
+	// add by lpp =====================================================================================================
+	@Nullable
+	private ArrayList<String> getSelectedNodesPath(MouseEvent mouseEvent) {
+		TreePath[] selectedPaths = tree.getSelectionPaths();
+		ArrayList<String> retPaths = new ArrayList<>();
+
+		if (selectedPaths != null) {
+			for (TreePath path : selectedPaths) {
+				Object obj  = path.getLastPathComponent();
+				if (obj instanceof JNode)
+				{
+					JPackage filePath = (JPackage)obj;
+					retPaths.add(filePath.getFullName());
+				}
+			}
+		}
+
+
+		return retPaths;
+	}
+	// add end ========================================================================================================
 
 	@Nullable
 	private JNode getJNodeUnderMouse(MouseEvent mouseEvent) {
@@ -779,7 +803,9 @@ public class MainWindow extends JFrame {
 		}
 		Object obj = path.getLastPathComponent();
 		if (obj instanceof JNode) {
-			tree.setSelectionPath(path);
+			//tree.setSelectionPath(path);
+			// modify by lpp
+			tree.addSelectionPath(path);
 			return (JNode) obj;
 		}
 		return null;
@@ -1217,7 +1243,10 @@ public class MainWindow extends JFrame {
 		treeModel = new DefaultTreeModel(treeRootNode);
 		tree = new JTree(treeModel);
 		ToolTipManager.sharedInstance().registerComponent(tree);
-		tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		//tree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+		// add by lpp
+		tree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION );
+
 		tree.setFocusable(false);
 		tree.addFocusListener(new FocusAdapter() {
 			@Override
@@ -1247,6 +1276,61 @@ public class MainWindow extends JFrame {
 				}
 			}
 		});
+		// add by lpp
+		class DragSelectMouseListener extends MouseAdapter {
+			private TreePath startPath;
+			private TreePath endPath;
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				startPath = tree.getClosestPathForLocation(e.getX(), e.getY());
+				endPath = startPath;
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+				startPath = null;
+				endPath = null;
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				TreePath currentPath = tree.getClosestPathForLocation(e.getX(), e.getY());
+				if (currentPath != null && !currentPath.equals(endPath)) {
+					endPath = currentPath;
+					int startRow = tree.getRowForPath(startPath);
+					int endRow = tree.getRowForPath(endPath);
+					tree.setSelectionInterval(startRow, endRow);
+					System.out.println("startRow: " + startRow);
+					System.out.println("endRow: " + endRow);
+				}
+			}
+		}
+
+		DragSelectMouseListener dragSelectMouseListener = new DragSelectMouseListener();
+		tree.addMouseListener(dragSelectMouseListener);
+		tree.addMouseMotionListener(dragSelectMouseListener);
+		// mouse multiple Select==================================================================================
+		class MultiSelectMouseListener extends MouseAdapter {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				if (e.getClickCount() == 1 && e.getButton() == MouseEvent.BUTTON1 && e.isControlDown()) {
+					TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+					if (path != null) {
+						if (tree.getSelectionModel().isPathSelected(path)) {
+							tree.getSelectionModel().removeSelectionPath(path);
+						} else {
+							tree.getSelectionModel().addSelectionPath(path);
+						}
+					}
+				}
+			}
+		}
+
+		MultiSelectMouseListener multiSelectMouseListener = new MultiSelectMouseListener();
+		tree.addMouseListener(multiSelectMouseListener);
+
+//==========================add end================================================================================
 		tree.setCellRenderer(new DefaultTreeCellRenderer() {
 			@Override
 			public Component getTreeCellRendererComponent(JTree tree,

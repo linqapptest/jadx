@@ -108,6 +108,7 @@ public class FileDialogWrapper {
 		}
 	}
 
+
 	public Path getCurrentDir() {
 		return currentDir;
 	}

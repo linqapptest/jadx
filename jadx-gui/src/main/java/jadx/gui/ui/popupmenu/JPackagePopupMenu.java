@@ -1,6 +1,7 @@
 package jadx.gui.ui.popupmenu;
 
 import java.awt.event.ActionEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -10,6 +11,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,19 +31,25 @@ public class JPackagePopupMenu extends JPopupMenu {
 
 	private final transient MainWindow mainWindow;
 
-	public JPackagePopupMenu(MainWindow mainWindow, JPackage pkg) {
+	public JPackagePopupMenu(MainWindow mainWindow, JPackage pkg, ArrayList<String> filesPath) {
 		this.mainWindow = mainWindow;
 
 		add(makeExcludeItem(pkg));
 		add(makeExcludeItem());
+		add(makeApkParserItem(filesPath));
 		JMenuItem menuItem = makeRenameMenuItem(pkg);
 		if (menuItem != null) {
 			add(menuItem);
 		}
 	}
 
+	public void SetSelectedFiles()
+	{
+
+	}
+
 	@Nullable
-	private JMenuItem makeRenameMenuItem(JPackage pkg) {
+	private JMenuItem makeRenameMenuItem(@NotNull JPackage pkg) {
 		List<String> aliasShortParts = splitPackage(pkg.getName());
 		int count = aliasShortParts.size();
 		if (count == 0) {
@@ -134,5 +142,10 @@ public class JPackagePopupMenu extends JPopupMenu {
 				new ExcludePkgDialog(mainWindow).setVisible(true);
 			}
 		});
+	}
+
+	private JMenuItem makeApkParserItem(ArrayList<String> filesPath) {
+
+		return new JCheckBoxMenuItem(NLS.str("popup.apk_parser"));
 	}
 }
